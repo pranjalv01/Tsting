@@ -1,0 +1,54 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    paths:
+      - '**'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  
+  security-scan:
+    name: CodeQL Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Setup CodeQL
+      uses: github/codeql-action/setup@v1
+      with:
+        languages: 'java'
+    - name: Run CodeQL analysis
+      uses: github/codeql-action/analyze@v1
+      with:
+        # Path to CodeQL database
+        database-path: './codeql-database'
+        # Path to SARIF output file
+        sarif-file: './codeql-results.sarif'
+        
+    notify:
+    name: Notify of security issues
+    needs: security-scan
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: Send email
+      uses: dawidd6/action-send-mail@v2
+      with:
+        server_address: smtp.gmail.com
+        server_port: 465
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: Security issues found in GitHub repository
+        body: |
+          Security issues were found in your GitHub repository.
+          Please review the attached SARIF file for details.
+        to: your-email@example.com
+        attachments: './codeql-results.sarif'
